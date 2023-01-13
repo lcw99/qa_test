@@ -7,13 +7,13 @@ from telegram.ext.filters import Filters
 from gpt_index_query_privacy import query
 import os
 
-updater = Updater(os.environ['OPENAI_API_KEY'], use_context=True)
+updater = Updater(os.environ['TELEGRAM_PRIVACY_QA_BOT_TOKEN'], use_context=True)
 
 
 def start(update: Update, context: CallbackContext):
 	update.message.reply_text(
-		"Hello sir, Welcome to the Bot.Please write\
-		/help to see the commands available.")
+		"개인정보보호포털 FAQ 봇입니다.\
+		개인정보보호 관련 질문을 해 주세요.")
 
 def help(update: Update, context: CallbackContext):
 	update.message.reply_text("""Available Commands :-
@@ -47,7 +47,12 @@ def geeks_url(update: Update, context: CallbackContext):
 
 def unknown(update: Update, context: CallbackContext):
 	#update.message.reply_text("Sorry '%s' is not a valid command" % update.message.text)
-    a = query(update.message.text)
+    q = update.message.text
+    q = q.strip()
+    if not q.endswith("?"):
+        q = q + "?"
+    a = query(q)
+    
     update.message.reply_text(a)
 
 
