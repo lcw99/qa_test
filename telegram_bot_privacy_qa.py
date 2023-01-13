@@ -5,9 +5,9 @@ from telegram.ext.commandhandler import CommandHandler
 from telegram.ext.messagehandler import MessageHandler
 from telegram.ext.filters import Filters
 from gpt_index_query_privacy import query
+import os
 
-updater = Updater("5842354762:AAEOnzgveCRHEh1r4eQRtCClv9tV6eesuxM",
-				use_context=True)
+updater = Updater(os.environ['OPENAI_API_KEY'], use_context=True)
 
 
 def start(update: Update, context: CallbackContext):
