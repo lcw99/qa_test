@@ -4,11 +4,14 @@ from langchain import OpenAI
 import json, os
 from deep_translator import GoogleTranslator
 
-index_file_name = 'privacy_index_eng.json'
 model_name = "text-davinci-003"
 #model_name = "text-curie-001"
+
+data_folder = "data_therapist"
+index_file_name = 'privacy_index_eng.json'
+
 def build_index():
-    documents = SimpleDirectoryReader('data_eng').load_data()
+    documents = SimpleDirectoryReader(data_folder).load_data()
     index = GPTTreeIndex(documents, num_children=10)
     #index = GPTListIndex(documents)
 
@@ -17,7 +20,14 @@ def build_index():
 if not os.path.exists(index_file_name):
     build_index()
 
-def query(text):
+def query(text, type):
+    global index_file_name
+    
+    if type == "therapist":
+        index_file_name = "therapist.json"
+    else:
+        index_file_name = "privacy_index_eng.json"
+    print(f'---- loading index file: {index_file_name}')
     llm_predictor = LLMPredictor(llm=OpenAI(temperature=0, model_name=model_name))
     new_index = GPTTreeIndex.load_from_disk(index_file_name, llm_predictor=llm_predictor)
 
@@ -45,8 +55,9 @@ if __name__ == '__main__':
     #q = "개인정보 교육을 외부 기관에서 수강해도 되나요?"
     #q = "회사 사업자등록정보도 개인정보 인가?"
     #q = "개인정보 수신동의를 몇년마다 받아야 하는가?"
-    q = "아동의 개인정보는 어떻게 수집하는가?"
+    #q = "아동의 개인정보는 어떻게 수집하는가?"
     #q = "개인정보 관리책임자의 자격은?"
+    q = "너무 외로워요. 어떻게 해야 할까요?"
     a = query(q)
     print(a)
     
