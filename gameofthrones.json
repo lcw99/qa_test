@@ -1,0 +1,1 @@
+{"sql_url": "sqlite:///faiss_doc_store_gameofthrones.db", "embedding_dim": 128, "faiss_index_factory_str": "Flat"}
