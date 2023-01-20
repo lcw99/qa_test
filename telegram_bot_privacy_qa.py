@@ -6,7 +6,7 @@ from telegram.ext.messagehandler import MessageHandler
 from telegram.ext.filters import Filters
 from telegram import (ChatAction)
 
-from gpt_index_query_privacy import query
+from gpt_index_query_privacy import query, clear_chat_history
 from functools import wraps
 import os
 from threading import Timer   
@@ -36,7 +36,7 @@ def start(update: Update, context: CallbackContext):
 def help(update: Update, context: CallbackContext):
 	update.message.reply_text("""가능한 상담 :-
         /couple - 연애상담
-		/therapist - 심리상담
+        /therapist - 심리상담
         /privacy_qa - 개인정보 FAQ
 """)
 
@@ -55,9 +55,9 @@ def privacy_qa(update: Update, context: CallbackContext):
     context.user_data["councelor_type"] = "privacy"  # couple, privacy, therapist
     update.message.reply_text("개인정보 FAQ 모드로 전환 되었습니다.")
 
-def geeks_url(update: Update, context: CallbackContext):
-	update.message.reply_text(
-		"GeeksforGeeks URL => https://www.geeksforgeeks.org/")
+def clear_chat_history_handler(update: Update, context: CallbackContext):
+    clear_chat_history(context)
+    update.message.reply_text("채팅 히스토리가 삭제 되었습니다.")
 
 def send_typing(context, chat_id):
     context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
@@ -69,6 +69,7 @@ def unknown(update: Update, context: CallbackContext):
     
     if "councelor_type" not in context.user_data.keys():
         context.user_data["councelor_type"] = "couple"
+        update.message.reply_text("연애/부부 상담 모드입니다. 가능한 모드를 보려면 /help 를 치세요.")
     q = update.message.text
     q = q.strip()
     # if not q.endswith("?"):
@@ -84,12 +85,12 @@ def unknown_text(update: Update, context: CallbackContext):
 		"Sorry I can't recognize you , you said '%s'" % update.message.text)
 
 
+updater.dispatcher.add_handler(CommandHandler('help', help))
 updater.dispatcher.add_handler(CommandHandler('start', start))
 updater.dispatcher.add_handler(CommandHandler('therapist', therapist))
 updater.dispatcher.add_handler(CommandHandler('privacy_qa', privacy_qa))
 updater.dispatcher.add_handler(CommandHandler('couple', couple_counselor))
-updater.dispatcher.add_handler(CommandHandler('help', help))
-updater.dispatcher.add_handler(CommandHandler('geeks', geeks_url))
+updater.dispatcher.add_handler(CommandHandler('clear', clear_chat_history_handler))
 updater.dispatcher.add_handler(MessageHandler(Filters.text, unknown))
 updater.dispatcher.add_handler(MessageHandler(
 	Filters.command, unknown)) # Filters out unknown commands

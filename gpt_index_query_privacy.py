@@ -30,6 +30,10 @@ def build_index():
 if not os.path.exists(index_file_name):
     build_index()
 
+def clear_chat_history(context: CallbackContext):
+    if "llm_predictor" in context.user_data.keys():
+        llm_predictor = context.user_data["llm_predictor"]
+        llm_predictor.clear_chat_history()
 
 def query(text, type, context: CallbackContext):
     if "llm_predictor" not in context.user_data.keys():
