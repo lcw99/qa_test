@@ -13,7 +13,6 @@ from threading import Timer
 
 updater = Updater(os.environ['TELEGRAM_PRIVACY_QA_BOT_TOKEN'], use_context=True)
 
-therapist_mode = True
 
 def send_typing_action(func):
     """Sends typing action while processing func command."""
@@ -29,36 +28,32 @@ def start(update: Update, context: CallbackContext):
 	update.message.reply_text(
 		"""
         인공지능 상담 봇입니다.
+        /couple - 연애상담
 		/therapist - 심리상담
         /privacy_qa - 개인정보 FAQ
       """)
 
 def help(update: Update, context: CallbackContext):
-	update.message.reply_text("""Available Commands :-
+	update.message.reply_text("""가능한 상담 :-
+        /couple - 연애상담
 		/therapist - 심리상담
         /privacy_qa - 개인정보 FAQ
 """)
 
 
-def gmail_url(update: Update, context: CallbackContext):
-	update.message.reply_text(
-		"Your gmail link here (I am not\
-		giving mine one for security reasons)")
+def couple_counselor(update: Update, context: CallbackContext):
+    context.user_data["councelor_type"] = "couple"  # couple, privacy, therapist
+    update.message.reply_text("연애/부부 상담 모드로 전환 되었습니다.")
 
 
 def therapist(update: Update, context: CallbackContext):
-    global therapist_mode
-    
-    therapist_mode = True
+    context.user_data["councelor_type"] = "therapist"  # couple, privacy, therapist
     update.message.reply_text("심리상담 모드로 전환 되었습니다.")
 
 
 def privacy_qa(update: Update, context: CallbackContext):
-    global therapist_mode
-
-    therapist_mode = False
+    context.user_data["councelor_type"] = "privacy"  # couple, privacy, therapist
     update.message.reply_text("개인정보 FAQ 모드로 전환 되었습니다.")
-
 
 def geeks_url(update: Update, context: CallbackContext):
 	update.message.reply_text(
@@ -68,20 +63,17 @@ def send_typing(context, chat_id):
     context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
     
 def unknown(update: Update, context: CallbackContext):
-    global therapist_mode
-
     context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=ChatAction.TYPING)
     t = Timer(8, send_typing, [context, update.effective_message.chat_id])  
     t.start()  
-        
+    
+    if "councelor_type" not in context.user_data.keys():
+        context.user_data["councelor_type"] = "couple"
     q = update.message.text
     q = q.strip()
     # if not q.endswith("?"):
     #     q = q + "?"
-    type = "privacy"
-    if therapist_mode:
-        type = "therapist"
-    a = query(q, type)
+    a = query(q, context.user_data["councelor_type"], context)
     
     t.cancel()
     update.message.reply_text(a)
@@ -94,9 +86,9 @@ def unknown_text(update: Update, context: CallbackContext):
 
 updater.dispatcher.add_handler(CommandHandler('start', start))
 updater.dispatcher.add_handler(CommandHandler('therapist', therapist))
-updater.dispatcher.add_handler(CommandHandler('help', help))
 updater.dispatcher.add_handler(CommandHandler('privacy_qa', privacy_qa))
-updater.dispatcher.add_handler(CommandHandler('gmail', gmail_url))
+updater.dispatcher.add_handler(CommandHandler('couple', couple_counselor))
+updater.dispatcher.add_handler(CommandHandler('help', help))
 updater.dispatcher.add_handler(CommandHandler('geeks', geeks_url))
 updater.dispatcher.add_handler(MessageHandler(Filters.text, unknown))
 updater.dispatcher.add_handler(MessageHandler(

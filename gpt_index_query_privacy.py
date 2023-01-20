@@ -6,21 +6,20 @@ from deep_translator import GoogleTranslator
 from langdetect import detect
 import fasttext
 import gcld3
+from telegram.ext.callbackcontext import CallbackContext
 
 model_name = "text-davinci-003"
 #model_name = "text-curie-001"
 
-data_folder = "data_therapist"
-index_file_name = 'privacy_index_eng.json'
+data_folder = "couple_counseling_data"
+index_file_name = 'couple_counseling_data.json'
 
-pretrained_lang_model = "fasttext/lid.176.ftz"
+pretrained_lang_model = "fasttext/lid.176.bin"
 fasttext_model = fasttext.load_model(pretrained_lang_model)
 
 detector = gcld3.NNetLanguageIdentifier(min_num_bytes=0, 
                                         max_num_bytes=1000)
 
-llm_predictor = LLMPredictor(llm=OpenAI(temperature=0, model_name=model_name))
-        
 def build_index():
     documents = SimpleDirectoryReader(data_folder).load_data()
     index = GPTTreeIndex(documents, num_children=10)
@@ -32,20 +31,25 @@ if not os.path.exists(index_file_name):
     build_index()
 
 
-def query(text, type):
-    global index_file_name
+def query(text, type, context: CallbackContext):
+    if "llm_predictor" not in context.user_data.keys():
+        context.user_data["llm_predictor"] = LLMPredictor(llm=OpenAI(temperature=0, model_name=model_name), chat_history=3)
+    llm_predictor = context.user_data["llm_predictor"]
     
     if type == "therapist":
-        index_file_name = "therapist.json"
-    else:
-        index_file_name = "privacy_index_eng.json"
-    print(f'---- loading index file: {index_file_name}')
+        index_file_name_local = "therapist.json"
+    elif type == "privacy":
+        index_file_name_local = "privacy_index_eng.json"
+    elif type == "couple":
+        index_file_name_local = "couple_counseling_data.json"
+        
+    print(f'---- loading index file: {index_file_name_local}')
     new_index = GPTTreeIndex.load_from_disk(index_file_name, llm_predictor=llm_predictor)
 
     q = text
     # input_lang = detect(q)
     # input_lang = detector.FindLanguage(text=q).language
-    result = fasttext_model.predict(q)
+    result = fasttext_model.predict(q.replace("\n", ""))
     print(result)
     input_lang = result[0][0].replace('__label__', '')
     print(input_lang, q)
