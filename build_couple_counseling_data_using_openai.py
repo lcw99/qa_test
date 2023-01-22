@@ -47,7 +47,7 @@ result_text = """1. Communication: Learning how to effectively communicate with 
 10. Self-Care: Discussing the importance of self-care and how to prioritize it in the relationship.
 11. Stress Management: Learning how to manage stress and how to support each other during difficult times.
 12. Compromise: Understanding the importance of compromise and how to negotiate differences.
-13. Values: Discussing values and how they impact the relationship.13
+13. Values: Discussing values and how they impact the relationship.
 14. Priorities: Identifying and prioritizing goals and values in the relationship.
 15. Self-Awareness: Learning how to be self-aware and understanding the impact of one’s actions on the relationship.
 16. Listening: Developing active listening skills and understanding the importance of listening to each other.

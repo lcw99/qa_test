@@ -20,17 +20,12 @@ Current conversation:
 Human: {input}
 AI:"""
 
-prompt_template_doctor = """Here is a friendly conversation between the patient and Patient Navigator.
-Patient Navigator listens to the patient's symptoms and, as kindly as possible, explains which doctor the patient should see. 
-patient does not have primary care physician.
-If Patient Navigator doesn't know the answer to a question, honestly say I don't know.
+prompt_template_doctor = """The conversation below is between AI counselor and a potential patient. The counselor identifies the patient's condition, symptoms, and current location and writes a report. Once the patient's condition, symptoms, and location are identified, the counselor writes a formal report which include patient's condition, symptoms, and location. Report shound be shown here for future refence.
 
-Summary of conversation:
-{history}
 Current conversation:
 {chat_history_lines}
 Patient: {input}
-Patient Navigator:"""
+Receptionist: """
 
 model_name = "text-davinci-003"
 #model_name = "text-curie-001"
@@ -59,9 +54,9 @@ def clear_chat_history(context: CallbackContext):
         llm_predictor = context.user_data["llm_predictor"]
         llm_predictor.clear_chat_history()
     if "conversation_doctor" in context.user_data.keys():
-        context.user_data["conversation_doctor"] = build_converation_chain(prompt_template_doctor)
+        context.user_data["conversation_doctor"] = build_converation_chain(["input", "chat_history_lines"], prompt_template_doctor)
         
-def clear_text(text):
+def translate_to_english(text):
     q = text
     # input_lang = detect(q)
     # input_lang = detector.FindLanguage(text=q).language
@@ -70,6 +65,7 @@ def clear_text(text):
     input_lang = result[0][0].replace('__label__', '')
     print(input_lang, q)
     q = GoogleTranslator(source='auto', target='en').translate(q)
+    # q = GoogleTranslator(source='ja', target='en').translate(q)
     print(q)
     return input_lang, q
     
@@ -77,16 +73,16 @@ def clear_text(text):
 def query(text, type, context: CallbackContext):
     if type == "doctor":
         if "conversation_doctor" not in context.user_data.keys():
-            context.user_data["conversation_doctor"] = build_converation_chain(prompt_template_doctor)
+            context.user_data["conversation_doctor"] = build_converation_chain(["input", "chat_history_lines"], prompt_template_doctor)
         conversation_doctor = context.user_data["conversation_doctor"]
-        input_lang, q = clear_text(text)
+        input_lang, q = translate_to_english(text)
         response = conversation_doctor.run(q)
         print(response)
-        response = GoogleTranslator(source='auto', target=input_lang).translate(response)
+        response = GoogleTranslator(source='en', target=input_lang).translate(response)
         return response
         
     if "llm_predictor" not in context.user_data.keys():
-        context.user_data["llm_predictor"] = LLMPredictor(llm=OpenAI(temperature=0, model_name=model_name), chat_history=3)
+        context.user_data["llm_predictor"] = LLMPredictor(llm=OpenAI(temperature=0.5, model_name=model_name), chat_history=3)
     llm_predictor = context.user_data["llm_predictor"]
     
     if type == "therapist":
@@ -99,11 +95,11 @@ def query(text, type, context: CallbackContext):
     print(f'---- loading index file: {index_file_name_local}')
     new_index = GPTTreeIndex.load_from_disk(index_file_name_local, llm_predictor=llm_predictor)
 
-    input_lang, q = clear_text(text)
+    input_lang, q = translate_to_english(text)
     
     response = new_index.query(q, verbose=True, mode=QueryMode.EMBEDDING)
     # print(f'====\n{response.get_formatted_sources()}\n===\n')
-    response = GoogleTranslator(source='auto', target=input_lang).translate(response.response)
+    response = GoogleTranslator(source='en', target=input_lang).translate(response.response)
     if response.startswith("A:"):
         response = response[2:].strip()
     print(response)

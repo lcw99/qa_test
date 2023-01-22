@@ -11,31 +11,9 @@ from telegram.ext.filters import Filters
 from telegram import (ChatAction)
 
 from gpt_index_query_privacy import query, clear_chat_history
-from langchain_conversation import build_converation_chain
 
 updater = Updater(os.environ['TELEGRAM_PRIVACY_QA_BOT_TOKEN'], use_context=True)
 
-prompt_template_default = """The following is a friendly conversation between a human and an AI. 
-The AI is talkative and provides lots of specific details from its context. 
-If the AI does not know the answer to a question, it truthfully says it does not know.
-
-Summary of conversation:
-{history}
-Current conversation:
-{chat_history_lines}
-Human: {input}
-AI:"""
-
-prompt_template_doctor = """Here is a friendly conversation between the patient and Patient Navigator.
-Patient Navigator listens to the patient's symptoms and, as kindly as possible, explains which doctor the patient should see.
-If Patient Navigator doesn't know the answer to a question, honestly say I don't know.
-
-Summary of conversation:
-{history}
-Current conversation:
-{chat_history_lines}
-Patient: {input}
-Patient Navigator:"""
 
 def send_typing_action(func):
     """Sends typing action while processing func command."""
@@ -85,7 +63,6 @@ def doctor(update: Update, context: CallbackContext):
     clear_chat_history(context)
     update.message.reply_text("의사 모드로 전환 되었습니다..")
 
-    context.user_data["conversation_doctor"] = build_converation_chain(prompt_template_doctor)
     
 def clear_chat_history_handler(update: Update, context: CallbackContext):
     clear_chat_history(context)
