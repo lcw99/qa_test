@@ -63,6 +63,11 @@ def doctor(update: Update, context: CallbackContext):
     clear_chat_history(context)
     update.message.reply_text("의사 모드로 전환 되었습니다..")
 
+def mbti(update: Update, context: CallbackContext):
+    context.user_data["councelor_type"] = "mbti"  
+    clear_chat_history(context)
+    update.message.reply_text("mbti 모드로 전환 되었습니다. 먼저 인사를 해보세요.")
+
     
 def clear_chat_history_handler(update: Update, context: CallbackContext):
     clear_chat_history(context)
@@ -103,6 +108,7 @@ updater.dispatcher.add_handler(CommandHandler('therapist', therapist))
 updater.dispatcher.add_handler(CommandHandler('privacy_qa', privacy_qa))
 updater.dispatcher.add_handler(CommandHandler('couple', couple_counselor))
 updater.dispatcher.add_handler(CommandHandler('doctor', doctor))
+updater.dispatcher.add_handler(CommandHandler('mbti', mbti))
 
 updater.dispatcher.add_handler(MessageHandler(Filters.text, unknown))
 updater.dispatcher.add_handler(MessageHandler(

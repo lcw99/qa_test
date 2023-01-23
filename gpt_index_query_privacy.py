@@ -7,7 +7,11 @@ from langdetect import detect
 import fasttext
 import gcld3
 from telegram.ext.callbackcontext import CallbackContext
-from langchain_conversation import build_converation_chain
+
+from langchain.llms import OpenAI
+from langchain.prompts import PromptTemplate
+from langchain.chains import ConversationChain
+from langchain.chains.conversation.memory import ConversationBufferMemory, ConversationSummaryMemory, CombinedMemory
 
 prompt_template_default = """The following is a friendly conversation between a human and an AI. 
 The AI is talkative and provides lots of specific details from its context. 
@@ -27,6 +31,13 @@ Current conversation:
 Patient: {input}
 Receptionist: """
 
+prompt_template_mbti = """The following is a conversation between an MBTI tester and a customer. MBTI testers try to identify the customer's personality as accurately as possible, and when the customer's personality is identified, they give a detailed explanation to the customer.
+
+Current conversation:
+{chat_history_lines}
+customer: {input}
+tester: """
+
 model_name = "text-davinci-003"
 #model_name = "text-curie-001"
 
@@ -38,6 +49,30 @@ fasttext_model = fasttext.load_model(pretrained_lang_model)
 
 detector = gcld3.NNetLanguageIdentifier(min_num_bytes=0, 
                                         max_num_bytes=1000)
+
+def build_conversation_chain(input_variables, prompt_template, human_prefix, ai_prefix):
+    conv_memory = ConversationBufferMemory(
+        memory_key="chat_history_lines",
+        input_key="input",
+        human_prefix=human_prefix,
+        ai_prefix=ai_prefix
+    )
+
+    # summary_memory = ConversationSummaryMemory(llm=OpenAI(), input_key="input")
+    # Combined
+    # memory = CombinedMemory(memories=[conv_memory, summary_memory])
+    memory = conv_memory
+    PROMPT = PromptTemplate(
+        input_variables=input_variables, template=prompt_template
+    )
+    llm = OpenAI(temperature=0.3)
+    conversation = ConversationChain(
+        llm=llm, 
+        verbose=True, 
+        memory=memory,
+        prompt=PROMPT
+    )
+    return conversation
 
 def build_index():
     documents = SimpleDirectoryReader(data_folder).load_data()
@@ -53,33 +88,81 @@ def clear_chat_history(context: CallbackContext):
     if "llm_predictor" in context.user_data.keys():
         llm_predictor = context.user_data["llm_predictor"]
         llm_predictor.clear_chat_history()
-    if "conversation_doctor" in context.user_data.keys():
-        context.user_data["conversation_doctor"] = build_converation_chain(["input", "chat_history_lines"], prompt_template_doctor)
+    if "conversation_chain" in context.user_data.keys():
+        conversation = context.user_data["conversation_chain"]
+        conversation.memory.clear()
         
 def translate_to_english(text):
     q = text
-    # input_lang = detect(q)
+    input_lang1 = detect(q)
     # input_lang = detector.FindLanguage(text=q).language
     result = fasttext_model.predict(q.replace("\n", ""))
     print(result)
-    input_lang = result[0][0].replace('__label__', '')
+    input_lang2 = result[0][0].replace('__label__', '')
+    if input_lang1 == input_lang2:
+        input_lang = input_lang1
+    else:
+        input_lang = 'ko'
     print(input_lang, q)
     q = GoogleTranslator(source='auto', target='en').translate(q)
     # q = GoogleTranslator(source='ja', target='en').translate(q)
     print(q)
     return input_lang, q
-    
-    
-def query(text, type, context: CallbackContext):
-    if type == "doctor":
-        if "conversation_doctor" not in context.user_data.keys():
-            context.user_data["conversation_doctor"] = build_converation_chain(["input", "chat_history_lines"], prompt_template_doctor)
-        conversation_doctor = context.user_data["conversation_doctor"]
-        input_lang, q = translate_to_english(text)
-        response = conversation_doctor.run(q)
-        print(response)
-        response = GoogleTranslator(source='en', target=input_lang).translate(response)
+
+def naver_request(url, text, source_lang = None, target_lang = None):
+    import urllib.request
+    encText = urllib.parse.quote(text)
+    if source_lang is None:
+        data = "query=" + encText
+    else:
+        data = f"source={source_lang}&target={target_lang}&text=" + encText    
+    request = urllib.request.Request(url)
+    request.add_header("X-Naver-Client-Id","gDewaOS1Yt3Skemibggq")
+    request.add_header("X-Naver-Client-Secret", "cQqrQRfHnZ")
+    response = urllib.request.urlopen(request, data=data.encode("utf-8"))
+    rescode = response.getcode()
+    if(rescode==200):
+        response_body = response.read()
+        response = json.loads(response_body.decode('utf-8'))
         return response
+
+    else:
+        print("Error Code:" + rescode)
+        return None
+        
+def translate_papago(text, source_lang, target_lang):
+    if source_lang == 'auto':
+        lang_res = naver_request("https://openapi.naver.com/v1/papago/detectLangs", text[:10])
+        print(lang_res)
+        source_lang = lang_res["langCode"]
+    response = naver_request("https://openapi.naver.com/v1/papago/n2mt", text, source_lang, target_lang)
+    if response is not None:
+        response = response["message"]["result"]["translatedText"]
+        return source_lang, response
+    else:
+        return 'ko', '에러'
+        
+def query(text, type, context: CallbackContext):
+    if type in ["doctor", "mbti"]:
+        if type == "doctor":
+            prompt_temp = prompt_template_doctor
+            human_prefix = "Patient"
+            ai_prefix = "Counselor"
+        elif type == "mbti":
+            prompt_temp = prompt_template_mbti
+            human_prefix = "Customer"
+            ai_prefix = "Tester"
+            
+        if "conversation_chain" not in context.user_data.keys():
+            context.user_data["conversation_chain"] = build_conversation_chain(["input", "chat_history_lines"], prompt_temp, human_prefix, ai_prefix)
+        conversation_chain = context.user_data["conversation_chain"]
+        input_lang, q = translate_to_english(text)
+        #input_lang, q = translate_papago(text, 'auto', 'en')
+        response_en = conversation_chain.run(q)
+        print(response_en)
+        response = GoogleTranslator(source='en', target=input_lang).translate(response_en)
+        #input_lang, response = translate_papago(response_en, 'en', input_lang)
+        return f'{response_en}\n\n{response}'
         
     if "llm_predictor" not in context.user_data.keys():
         context.user_data["llm_predictor"] = LLMPredictor(llm=OpenAI(temperature=0.5, model_name=model_name), chat_history=3)
