@@ -42,7 +42,7 @@ model_name = "text-davinci-003"
 #model_name = "text-curie-001"
 
 data_folder = "couple_counseling_data"
-index_file_name = 'couple_counseling_data.json'
+index_file_name = 'couple_counseling_data_list.json'
 
 pretrained_lang_model = "fasttext/lid.176.bin"
 fasttext_model = fasttext.load_model(pretrained_lang_model)
@@ -76,8 +76,8 @@ def build_conversation_chain(input_variables, prompt_template, human_prefix, ai_
 
 def build_index():
     documents = SimpleDirectoryReader(data_folder).load_data()
-    index = GPTTreeIndex(documents, num_children=10)
-    #index = GPTListIndex(documents)
+    #index = GPTTreeIndex(documents, num_children=10)
+    index = GPTListIndex(documents)
 
     index.save_to_disk(index_file_name)
 
@@ -177,10 +177,12 @@ def query(text, type, context: CallbackContext):
         
     print(f'---- loading index file: {index_file_name_local}')
     new_index = GPTTreeIndex.load_from_disk(index_file_name_local, llm_predictor=llm_predictor)
+    # new_index = GPTListIndex.load_from_disk(index_file_name_local, llm_predictor=llm_predictor)
 
     input_lang, q = translate_to_english(text)
     
     response = new_index.query(q, verbose=True, mode=QueryMode.EMBEDDING)
+    # response = new_index.query(q, verbose=True, response_mode="tree_summarize")
     # print(f'====\n{response.get_formatted_sources()}\n===\n')
     response = GoogleTranslator(source='en', target=input_lang).translate(response.response)
     if response.startswith("A:"):
