@@ -76,8 +76,8 @@ def build_conversation_chain(input_variables, prompt_template, human_prefix, ai_
 
 def build_index():
     documents = SimpleDirectoryReader(data_folder).load_data()
-    #index = GPTTreeIndex(documents, num_children=10)
-    index = GPTListIndex(documents)
+    index = GPTTreeIndex(documents, num_children=10)
+    #index = GPTListIndex(documents)
 
     index.save_to_disk(index_file_name)
 
