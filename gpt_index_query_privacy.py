@@ -38,6 +38,13 @@ Current conversation:
 customer: {input}
 tester: """
 
+prompt_template_couple_counselor = """Based on the following conversation, as a professional and friendly couples counselor, you should solve the client's problem through dialogue with the client. Let's start a conversation with the customer. As for the response, put yourself in the customer's shoes, be comfortable and very direct as if you were a friend, and ask questions if possible to induce the next customer's response. Response in the easiest sentence possible.
+
+conversation:
+{chat_history_lines}
+customer: {input}
+counselor: """
+
 model_name = "text-davinci-003"
 #model_name = "text-curie-001"
 
@@ -65,7 +72,7 @@ def build_conversation_chain(input_variables, prompt_template, human_prefix, ai_
     PROMPT = PromptTemplate(
         input_variables=input_variables, template=prompt_template
     )
-    llm = OpenAI(temperature=0.3)
+    llm = OpenAI(temperature=0.7)
     conversation = ConversationChain(
         llm=llm, 
         verbose=True, 
@@ -143,7 +150,7 @@ def translate_papago(text, source_lang, target_lang):
         return 'ko', '에러'
         
 def query(text, type, context: CallbackContext):
-    if type in ["doctor", "mbti"]:
+    if type in ["doctor", "mbti", "couple"]:
         if type == "doctor":
             prompt_temp = prompt_template_doctor
             human_prefix = "Patient"
@@ -152,6 +159,10 @@ def query(text, type, context: CallbackContext):
             prompt_temp = prompt_template_mbti
             human_prefix = "Customer"
             ai_prefix = "Tester"
+        elif type == "couple":
+            prompt_temp = prompt_template_couple_counselor
+            human_prefix = "Customer"
+            ai_prefix = "Counselor"
             
         if "conversation_chain" not in context.user_data.keys():
             context.user_data["conversation_chain"] = build_conversation_chain(["input", "chat_history_lines"], prompt_temp, human_prefix, ai_prefix)
